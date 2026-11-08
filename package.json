@@ -1,7 +1,7 @@
 {
   "name": "magpie-scnet-auth",
   "version": "0.2.0",
-  "description": "超算互联网（SCNet）provider 插件：读取计算服务桌面端的登录凭据（或浏览器登录官网自动铸 Key），之后 OpenAI 兼容直连 api.scnet.cn —— WorkBuddy/Qoder 式「认证客户端，就可以使用模型」",
+  "description": "超算互联网（SCNet）provider 插件：读取计算服务桌面端的登录凭据（或浏览器登录官网自动铸 Key），之后 OpenAI 兼容直连 api.scnet.cn，一次认证即可使用模型",
   "type": "module",
   "main": "./index.mjs",
   "files": [

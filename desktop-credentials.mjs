@@ -1,6 +1,6 @@
 // 超算客户端（计算服务）的桌面端凭据读取。
 //
-// WorkBuddy "desktop's sign-in" 方式的 SCNet 版：客户端的 agent 第一次跑模型时，
+// 凭据来源：客户端的 agent 第一次跑模型时，
 // 会把它铸造的 API Key（控制台侧名字叫 SCNet_Client）明文写进
 //   %USERPROFILE%\.sclaw\agent\scnet-credentials\<账号指纹>.json
 // 形如 {"scnet":{"type":"api_key","key":"sk-…"}}。

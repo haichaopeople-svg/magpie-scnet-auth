@@ -1,12 +1,12 @@
 # magpie-scnet-auth
 
-超算互联网（SCNet）的 Magpie provider 插件：**像 WorkBuddy / Qoder 一样，认证一次客户端，模型就能用**。
+超算互联网（SCNet）的 Magpie provider 插件：**认证一次，模型就能用**。
 
 登录一次之后，所有请求都是官方 OpenAI 兼容 API（`https://api.scnet.cn/api/llm/v1`）上的纯 Bearer 调用——没有签名、没有协议改写、没有需要保持打开的窗口。Magpie 负责 OpenAI / Anthropic 协议转换。
 
 > 本项目与超算互联网 / 曙光智算 / Magpie 官方均无关联，仅供个人学习与自用。使用前请阅读下方「许可与免责声明」。
 
-## 三种登录方式（WorkBuddy/Qoder 同款结构，逐级兜底）
+## 三种登录方式（逐级兜底）
 
 | 方式 | 适用 | 体验 |
 |---|---|---|

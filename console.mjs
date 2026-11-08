@@ -279,7 +279,7 @@ export function pickPlan(rows) {
 
 const format = (value) => Number(value).toLocaleString("en-US", { maximumFractionDigits: 6 })
 
-// usage 钩子的套餐展示（形状对齐社区 scnet-auth，已验证 Magpie 可显示）。
+// usage 钩子的套餐展示形状（已在 Magpie 供应商页实测可渲染）。
 export function planUsageView(row) {
   const view = pickPlan([row])
   if (!view) throw new ConsoleError("套餐数据为空。", "shape")
