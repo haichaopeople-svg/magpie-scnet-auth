@@ -150,6 +150,22 @@ check("usage 分支文案", async () => {
   assert.equal(signIn(withPlan), "kept")
 })
 
+// 8) 活动限免 Key 的提取（会话回归，2026-11-09）：
+//    真实返回 {"apiKey":"sk-NTcz…=","baseUrl":…,"model":…}，Key 是 base64 形态（可含 + / = 结尾）；
+//    旧字段白名单不验形状，掩码 Key（sk-N****MzY=）会被当可用 Key 放行，后续推理 401 误报「没有推理权限」。
+//    另注：当天首次登录失败（service credential is unavailable）的真实原因是新账号开通延迟
+//    —— createActivityApiKey 返回成功但无 Key，与解析无关（已改为轮询重试，见 console.mjs）。
+check("活动限免 Key 提取（回归）", async () => {
+  const { extractKeyField } = await import("../console.mjs")
+  const real = "sk-NTczLTExOTE4NjMxOTMzLTE3OTQxODk2NDgyMzY="
+  assert.equal(extractKeyField({ apiKey: real, baseUrl: "https://api.scnet.cn/api/llm/v1", model: "MiniMax-M2.5" }), real)
+  assert.equal(extractKeyField({ apiKey: "sk-abc+def/ghi=" }), "sk-abc+def/ghi=", "base64 里的 + / = 也要收")
+  assert.equal(extractKeyField({ data: { credentials: { value: "sk-Zm9vYmFyYmF6" } } }), "sk-Zm9vYmFyYmF6", "任意嵌套字段也要找")
+  assert.equal(extractKeyField({ apiKey: "sk-N****MzY=" }), null, "掩码 Key 不可用")
+  assert.equal(extractKeyField({ apiKey: "" }), null)
+  assert.equal(extractKeyField({ model: "MiniMax-M2.5", baseUrl: "https://api.scnet.cn" }), null, "非 Key 字符串不能误判")
+})
+
 let failed = 0
 for (const [name, fn] of checks) {
   try {

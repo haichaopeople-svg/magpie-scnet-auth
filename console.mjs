@@ -148,15 +148,33 @@ async function queryModelKeys(cookie, context) {
   return keys
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
 // 确保拿到一把有推理权限的模型 Key；返回 {key, source}。失败抛 ConsoleError（中文）。
 export async function ensureModelKey(cookie) {
-  try {
-    const key = extractKeyField(await createActivityKey(cookie))
-    if (key) return { key, source: "createActivityApiKey" }
-    throw new ConsoleError("SCNet service credential is unavailable", "shape")
-  } catch (error) {
-    if (!(error instanceof ConsoleError && error.providerCode === "API010010")) throw error
+  // 活动限免 Key：新注册账号开通模型服务有延迟——首次调用可能 HTTP 200 成功但 data 里还没有
+  // Key（2026-11-09 实测：注册后 4 秒登录即此形态，约一分钟后同一接口就返回了 Key）。
+  // 开通中（无 Key）时轮询三次再放弃；API010010 = 不参与活动，转正式成员 Key 决策树。
+  let activityError = null
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const key = extractKeyField(await createActivityKey(cookie))
+      if (key) return { key, source: "createActivityApiKey" }
+      activityError = new ConsoleError(
+        "账号的模型服务还在开通中（新注册账号常见，一般一分钟内就绪）。" +
+          "请稍等一两分钟后重试浏览器登录；或到官网「模型 API → API Keys」确认账号状态。",
+        "shape",
+      )
+    } catch (error) {
+      if (error instanceof ConsoleError && error.providerCode === "API010010") {
+        activityError = null
+        break
+      }
+      throw error
+    }
+    if (attempt < 3) await sleep(4000 * attempt)
   }
+  if (activityError) throw activityError
 
   const context = await clusterUserContext(cookie)
   const keyName = `scnet-client-member-${context.createUser}`
@@ -199,16 +217,22 @@ export async function ensureModelKey(cookie) {
   return { key, source: "api-key/create" }
 }
 
-// 从控制台响应里递归找 key 形态的字段（apiKey/apikey/key/secret/token）。
+// Key 形如 sk-/sc- 后面跟一段 base64（可能带 + / =）。
+// 注意：不能用 [A-Za-z0-9_=-] 白名单——真实 Key 结尾是 "="（base64 填充），
+// 0.2.0 因此把它判成不可用，浏览器登录整条失败。
+const KEY_SHAPE = /^(sk-|sc-)[A-Za-z0-9_+/=-]{8,}$/
+const isUsableKey = (value) => typeof value === "string" && KEY_SHAPE.test(value.trim()) && !value.includes("*")
+
+// 从控制台响应里递归找 key 形态的字段（不限定字段名：活动 Key 包在 credentials/任意嵌套里也能找到）。
 export function extractKeyField(value, depth = 0) {
   if (depth > 6) return null
   if (typeof value === "string") {
     const trimmed = value.trim()
-    return /^(sk-|sc-)[A-Za-z0-9_=-]{8,}$/.test(trimmed) ? trimmed : null
+    return isUsableKey(trimmed) ? trimmed : null
   }
   if (!value || typeof value !== "object") return null
   for (const name of ["apiKey", "apikey", "key", "secret", "token"]) {
-    if (typeof value[name] === "string" && value[name].trim()) return value[name].trim()
+    if (isUsableKey(value[name])) return value[name].trim()
   }
   if (Array.isArray(value)) {
     for (const item of value) {
